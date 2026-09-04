@@ -1,0 +1,78 @@
+# ============================================================
+# 任务: NVT 分子动力学 (两阶段: 平衡 + 产线)
+# 生成时间: 2026-08-23 01:20:27   (lmpgen)
+# 生成命令: lmpgen.py from-json
+# 参数: data=../1-opt/NaBH_opt.dat, elements=B/H/Na, potential=deepmd:frozen_omat24_plus.pt2, temp=500.0, equil=1000, prod=5000, msd=Na
+# ============================================================
+
+# ------------------------------------------------------------
+# 初始化设置
+# ------------------------------------------------------------
+units          metal
+boundary       p p p
+atom_style     atomic
+atom_modify    map yes
+
+neighbor       2.0 bin
+neigh_modify   every 1 delay 0 check yes
+
+# ------------------------------------------------------------
+# 读取结构 + 质量
+# ------------------------------------------------------------
+read_data      ../1-opt/NaBH_opt.dat
+
+# 元素顺序与 data 文件中的原子类型编号一一对应 (质量自动查表)
+mass           1 10.81                                 # B
+mass           2 1.008                                 # H
+mass           3 22.99                                 # Na
+# 体系: 704 原子, 3 种类型 (B/H/Na)
+
+# ------------------------------------------------------------
+# 势函数: deepmd
+# ------------------------------------------------------------
+pair_style     deepmd frozen_omat24_plus.pt2
+pair_coeff     * * B H Na                              # deepmd
+
+# ------------------------------------------------------------
+# NVT 分子动力学: 温度 500.0 K, 阻尼 0.1
+# ------------------------------------------------------------
+timestep       0.001                                   # ps (metal) / fs (real)
+variable       T equal 500.0
+
+# 初始化速度 (随机种子记录于文件头, 高斯分布)
+velocity       all create ${T} 709694 dist gaussian
+
+# NVT 系综 (固定晶胞)
+fix            thermostat all nvt temp ${T} ${T} 0.1
+# ------------------------------------------------------------
+# 平衡阶段: 1000 步
+# ------------------------------------------------------------
+thermo         100
+thermo_style   custom step temp pe ke etotal press vol lx ly lz
+run            1000
+
+reset_timestep 0
+
+# ------------------------------------------------------------
+# 产线阶段: 5000 步, 每 50 步输出一帧
+# ------------------------------------------------------------
+thermo         100
+compute        pe_atom all pe/atom
+
+# 全原子轨迹 (id, type, 坐标, 每原子势能), 按 id 排序
+dump           d_all all custom 50 traj_all.xyz id type x y z c_pe_atom
+dump_modify    d_all sort id
+
+group          g_Na type 3                             # Na 原子
+dump           d_Na g_Na custom 50 traj_Na.xyz id type x y z c_pe_atom
+dump_modify    d_Na sort id
+
+# BH 组轨迹 (B+H 合并输出)
+group          g_BH type 1 2                           # B+H
+dump           d_BH g_BH custom 50 traj_BH.xyz id type x y z c_pe_atom
+dump_modify    d_BH sort id
+
+# MSD 实时计算 (Na 组, 已扣除组内质心漂移), 每 50 步输出一次位移平方
+compute        msd_Na g_Na msd com yes
+fix            msd_out all ave/time 50 1 50 c_msd_Na[4] file msd_Na.dat
+run            5000
