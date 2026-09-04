@@ -1,0 +1,99 @@
+{
+    "total": {
+        "_说明": {
+            "data": "结构文件, 路径相对项目根目录",
+            "elements": "元素列表, 顺序对应 data 文件类型编号; 质量自动查表",
+            "potential": "style:file; style 可选 deepmd | mace | eam/alloy | eam/fs | tersoff; file 可写绝对路径, 生成时自动软链接到各任务目录",
+            "units": "metal | real (时间步长/阻尼默认值随单位制切换)",
+            "boundary": "边界条件: p=周期 f=固定, 如 'p p f'",
+            "atom_style": "原子风格, 一般保持 atomic",
+            "skin": "neighbor skin (A)",
+            "freeze_type": "固定原子: 冻结的类型编号, 如 [1, 2] 冻结 B/H 骨架; [] = 不固定; 各任务段可覆盖",
+            "freeze_expr": "固定原子: 按 group 表达式冻结, 如 'region bottom' (region 需经 extra 先定义); 与 freeze_type 二选一, null = 不用"
+        },
+        "data": "NaBH.dat",
+        "elements": [
+            "B",
+            "H",
+            "Na"
+        ],
+        "potential": "/home/tongjunrui/My_Project/lmpgen/frozen_omat24_plus.pt2",
+        "units": "metal",
+        "boundary": "p p p",
+        "atom_style": "atomic",
+        "skin": 2.0,
+        "freeze_type": [],
+        "freeze_expr": null
+    },
+    "1_opt": {
+        "_说明": {
+            "dir": "输出目录 (自动创建; 任务目录自包含, 可整体打包到集群)",
+            "type": "任务类型: opt | nvt | npt | heat",
+            "fix_box": "true = 固定晶格参数, 仅弛豫原子位置; false = 按 relax 弛豫晶胞",
+            "relax": "晶胞弛豫模式: iso | aniso | tri (fix_box=true 时忽略)",
+            "pressure": "目标外压 (bar)",
+            "vmax": "box/relax 每步体积变化上限",
+            "min_style": "最小化算法: cg | fire | sd | quickmin",
+            "etol": "能量收敛判据",
+            "ftol": "力收敛判据",
+            "maxiter": "最大迭代步数",
+            "maxeval": "最大力计算次数",
+            "thermo_every": "热力学量输出间隔 (步)",
+            "write_data": "优化后结构输出名 (下一步 data 写 null 即自动引用它)"
+        },
+        "dir": "1-opt",
+        "type": "opt",
+        "fix_box": false,
+        "relax": "iso",
+        "pressure": 0.0,
+        "vmax": 0.001,
+        "min_style": "cg",
+        "etol": 1e-12,
+        "ftol": 1e-12,
+        "maxiter": 100000,
+        "maxeval": 1000000,
+        "thermo_every": 10,
+        "write_data": "NaBH_opt.dat"
+    },
+    "2_nvt": {
+        "_说明": {
+            "dir": "输出目录 (自动创建)",
+            "type": "任务类型: opt | nvt | npt | heat",
+            "data": "null = 链式引用上一步 opt 的输出; 也可写显式路径覆盖",
+            "timestep": "时间步长 (ps, metal 单位)",
+            "seed": "速度随机种子; null=自动随机, 实际值记录在生成文件头",
+            "temps": "温度 (必填): 单温度写数值如 500; 多温度写数组如 [400, 500, 600], 每个温度独立子目录 (如 md/400K/)",
+            "tdamp": "控温阻尼 (ps)",
+            "equil": "平衡阶段步数",
+            "prod": "产线阶段步数",
+            "thermo_every": "热力学量输出间隔 (步)",
+            "dump_every": "轨迹输出间隔 (步)",
+            "dump_elements": "额外单独输出轨迹的元素; [] = 不单独输出",
+            "dump_groups": "几种元素合并输出一个轨迹文件, 如 {\"anion\": [\"B\", \"H\"]} -> traj_anion.xyz; {} = 不用",
+            "dump_atoms": "按原子 id 输出轨迹, 如 {\"jump\": [12, 45, 78]} -> traj_jump.xyz; {} = 不用",
+            "msd": "实时计算 MSD 的元素, 直接输出 msd_元素.dat; null = 不算"
+        },
+        "dir": "2-nvt",
+        "type": "nvt",
+        "data": null,
+        "timestep": 0.001,
+        "seed": null,
+        "tdamp": 0.1,
+        "equil": 1000,
+        "prod": 5000,
+        "thermo_every": 100,
+        "dump_every": 50,
+        "dump_elements": [
+            "Na"
+        ],
+        "dump_groups": {
+            "BH": [
+                "B",
+                "H"
+            ]
+        },
+        "dump_atoms": {},
+        "msd": "Na",
+        "temps": 500
+    }
+}
